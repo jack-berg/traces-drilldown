@@ -9,6 +9,8 @@ import { getFiltersVariable } from 'utils/utils';
 import { SceneObject } from '@grafana/scenes';
 import { useFavoriteAttributes } from 'hooks';
 import { AttributeItem, ScopeType } from '../../types';
+import { SemconvAttributeTooltip } from '../../semconv/SemconvAttributeTooltip';
+import { toSemconvKey } from '../../semconv/normalize';
 import { getTestIdFromAttribute } from 'utils/testIds';
 
 interface BaseAttributesSidebarProps {
@@ -441,7 +443,9 @@ export function AttributesSidebar({
                       />
                     )}
                     {isFiltered && <Icon name="filter" color={theme.colors.text.disabled} />}
-                    <div className={styles.attributeLabel}>{attribute.label}</div>
+                    <SemconvAttributeTooltip name={toSemconvKey(attribute.value)}>
+                      <div className={styles.attributeLabel}>{attribute.label}</div>
+                    </SemconvAttributeTooltip>
                   </div>
                   {showFavorites && (
                     <IconButton
