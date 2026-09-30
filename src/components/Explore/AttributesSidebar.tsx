@@ -9,8 +9,7 @@ import { getFiltersVariable } from 'utils/utils';
 import { SceneObject } from '@grafana/scenes';
 import { useFavoriteAttributes } from 'hooks';
 import { AttributeItem, ScopeType } from '../../types';
-import { SemconvAttributeTooltip } from '../../semconv/SemconvAttributeTooltip';
-import { toSemconvKey } from '../../semconv/normalize';
+import { SemconvTooltip } from '@grafana/otel-semconv-client';
 import { getTestIdFromAttribute } from 'utils/testIds';
 
 interface BaseAttributesSidebarProps {
@@ -443,9 +442,9 @@ export function AttributesSidebar({
                       />
                     )}
                     {isFiltered && <Icon name="filter" color={theme.colors.text.disabled} />}
-                    <SemconvAttributeTooltip name={toSemconvKey(attribute.value)}>
+                    <SemconvTooltip name={attribute.value} signal={{ attributes: 'tempo-scope' }}>
                       <div className={styles.attributeLabel}>{attribute.label}</div>
-                    </SemconvAttributeTooltip>
+                    </SemconvTooltip>
                   </div>
                   {showFavorites && (
                     <IconButton

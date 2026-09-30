@@ -3,11 +3,9 @@ import { DataFrame, GrafanaTheme2 } from '@grafana/data';
 import { Trans } from '@grafana/i18n';
 import { Stack, useStyles2 } from '@grafana/ui';
 import { css } from '@emotion/css';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { getFiltersVariable } from '../../../utils/utils';
-import { useSemconvAttribute } from '../../../semconv/useSemconvAttribute';
-import { toSemconvKey } from '../../../semconv/normalize';
-import { buildSemconvPanelDescription } from '../../../semconv/panelDescription';
+import { enrichVizPanel } from '@grafana/otel-semconv-client';
 import { addToFilters } from '../actions/AddToFiltersAction';
 import { IncludeExcludeButtons } from '../actions/IncludeExcludeButtons';
 import { computeHighestDifference } from '../../../utils/comparison';
@@ -32,8 +30,13 @@ export class HighestDifferencePanel extends SceneObjectBase<HighestDifferencePan
   }
 
   private _onActivate() {
-    const { frame } = this.state;
+    const { frame, panel } = this.state;
     this.setState({ ...computeHighestDifference(frame) });
+    enrichVizPanel(panel, {
+      name: frame.name,
+      signal: { attributes: 'tempo-scope' },
+      slot: 'titleItem',
+    });
 
     this._subs.add(
       this.subscribeToState((newState, prevState) => {
@@ -106,13 +109,7 @@ export class HighestDifferencePanel extends SceneObjectBase<HighestDifferencePan
     const value = model.getValue();
     const normalizedFilterValue = model.getNormalizedFilterValue();
     const key = model.state.frame.name ?? '';
-    const semconv = useSemconvAttribute(toSemconvKey(key));
-    useEffect(() => {
-      if (!semconv) {
-        return;
-      }
-      panel.setState({ description: buildSemconvPanelDescription(semconv) });
-    }, [panel, semconv]);
+
     const variable = getFiltersVariable(model);
     const includeFilterExists = variable.state.filters.find(
       (f) => f.key === key && f.value === normalizedFilterValue && f.operator === '='

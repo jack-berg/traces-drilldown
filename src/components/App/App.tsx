@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppRootProps, PageLayoutType, usePluginContext } from '@grafana/data';
 import { t } from '@grafana/i18n';
+import { SemconvProvider } from '@grafana/otel-semconv-client';
 import { AppRoutes } from '../Routes';
 import { PluginPage } from '@grafana/runtime';
 import { JsonData } from '../AppConfig/AppConfig';
@@ -31,7 +32,9 @@ class App extends React.PureComponent<AppRootProps<JsonData>> {
     return (
       <PluginPage layout={PageLayoutType.Custom} pageNav={{ text: t('app.page-title', 'Traces Drilldown') }}>
         <OpenFeaturePluginScope>
-          <AppRoutes />
+          <SemconvProvider>
+            <AppRoutes />
+          </SemconvProvider>
         </OpenFeaturePluginScope>
       </PluginPage>
     );
