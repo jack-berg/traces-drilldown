@@ -6,9 +6,9 @@ import { DataQuery } from '@grafana/schema';
 import { t } from '@grafana/i18n';
 import { ToolbarButton } from '@grafana/ui';
 
-import { getDatasourceVariable, getFiltersVariable, getTraceExplorationScene } from '../../../utils/utils';
+import { getDatasourceVariable, getTraceExplorationScene } from '../../../utils/utils';
 import { SaveSearchModal } from './SaveSearchModal';
-import { renderTraceQLLabelFilters } from '../../../utils/filters-renderer';
+import { useCurrentSearch } from './currentSearch';
 import { OpenQueryLibraryComponentProps, useQueryLibrarySupported } from './saveSearch';
 
 interface Props {
@@ -33,8 +33,7 @@ export function SaveSearchButton({ sceneRef }: Props) {
 
   const traceExploration = useMemo(() => getTraceExplorationScene(sceneRef), [sceneRef]);
 
-  const { filters } = getFiltersVariable(traceExploration).useState();
-  const hasFilters = filters.length > 0;
+  const { query: queryExpr, drilldownState, hasFilters, ready } = useCurrentSearch(sceneRef);
 
   const fallbackComponent = useMemo(
     () => (
@@ -52,7 +51,6 @@ export function SaveSearchButton({ sceneRef }: Props) {
   );
 
   const query: DataQuery = useMemo(() => {
-    const queryExpr = renderTraceQLLabelFilters(filters);
     return {
       refId: 'traces-drilldown',
       datasource: {
@@ -60,15 +58,16 @@ export function SaveSearchButton({ sceneRef }: Props) {
         uid: dsUid,
       },
       query: queryExpr,
+      drilldownState,
       queryType: 'traceql',
     };
-  }, [filters, dsUid]);
+  }, [queryExpr, drilldownState, dsUid]);
 
   if (traceExploration.state.embedded) {
     return null;
   }
 
-  if (!hasFilters) {
+  if (!hasFilters || !ready) {
     return null;
   }
 

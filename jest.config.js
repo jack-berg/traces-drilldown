@@ -23,6 +23,10 @@ module.exports = {
   // Override transformIgnorePatterns to include additional ES modules
   transformIgnorePatterns: [nodeModulesToTransform(additionalESModules)],
   moduleNameMapper: {
+    '^react(/.*)?$': '<rootDir>/node_modules/react$1',
+    '^react-dom(/.*)?$': '<rootDir>/node_modules/react-dom$1',
+    '^@grafana/(data|runtime|ui|schema)$': '<rootDir>/node_modules/@grafana/$1',
+    '^@emotion/react$': '<rootDir>/node_modules/@emotion/react',
     '\\.(css|scss|sass)$': 'identity-obj-proxy',
     'react-inlinesvg': '<rootDir>/.config/jest/mocks/react-inlinesvg.tsx',
     '\\.(svg|png|jpg|jpeg|gif)$': '<rootDir>/.config/jest/mocks/fileMock.js', // Mock static file imports

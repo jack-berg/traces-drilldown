@@ -5,6 +5,11 @@ import { AttributesSidebar } from './AttributesSidebar';
 import { SelectableValue } from '@grafana/data';
 import { AdHocFiltersVariable, SceneObject } from '@grafana/scenes';
 
+jest.mock('@grafana/otel-semconv-client', () => ({
+  ...jest.requireActual('@grafana/otel-semconv-client'),
+  SemconvTooltip: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // Mock the hooks and utilities
 jest.mock('hooks', () => ({
   useFavoriteAttributes: jest.fn(() => ({

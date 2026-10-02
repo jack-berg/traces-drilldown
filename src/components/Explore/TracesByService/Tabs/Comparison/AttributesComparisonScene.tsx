@@ -125,7 +125,8 @@ export class AttributesComparisonScene extends SceneObjectBase<AttributesCompari
     const sceneTimeRange = sceneGraph.getTimeRange(this);
     const from = sceneTimeRange.state.value.from.unix();
     const to = sceneTimeRange.state.value.to.unix();
-    const primarySignal = getPrimarySignalVariable(this).state.value;
+    const primaryState = getPrimarySignalVariable(this).state;
+    const primarySignal = primaryState.scope === 'root' ? 'nestedSetParent<0' : primaryState.value;
     const filteredAttributes = this.getFilteredAttributes(primarySignal);
     const hideBaselineOnlyPanels = hideBaselineOnly ?? this.state.hideBaselineOnlyPanels ?? false;
 

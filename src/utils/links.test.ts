@@ -3,6 +3,43 @@ import { contextToLink, traceqlFiltersToAdHoc, TraceqlFilter } from './links';
 import { RESOURCE, SPAN } from './shared';
 
 describe('contextToLink', () => {
+  it('preserves structured semantic selections and explicit root scope instead of reparsing the generated union', () => {
+    const result = getLink(
+      createMockContext([
+        {
+          datasource: { type: 'tempo', uid: 'test-uid' },
+          query: '{(shape || other) && filters}',
+          drilldownState: {
+            version: 1,
+            spanFilters: { scope: 'root', primarySignal: 'kind=server', semconv: ['type:http.server', 'namespace:db'] },
+            attributeFilters: [{ key: 'resource.service.name', operator: '=', value: 'api' }],
+          },
+        },
+      ])
+    );
+    const params = new URL(result!.path, 'http://localhost').searchParams;
+    expect(params.get('spanScope')).toBe('root');
+    expect(params.get('var-primarySignal')).toBe('kind=server');
+    expect(params.getAll('spanTypes')).toEqual(['type:http.server', 'namespace:db']);
+    expect(params.get('var-filters')).toBe('resource.service.name|=|api');
+  });
+
+  it('does not broaden queries with malformed saved state', () => {
+    expect(
+      getLink(
+        createMockContext([
+          { datasource: { type: 'tempo', uid: 'test-uid' }, query: '{shape}', drilldownState: { version: 999 } },
+        ])
+      )
+    ).toBeUndefined();
+  });
+
+  it('does not flatten raw shape unions or complements when metadata is unavailable', () => {
+    for (const query of ['{span.foo != nil || span.bar != nil}', '{!(kind=server && span.foo != nil)}']) {
+      expect(getLink(createMockContext([{ datasource: { type: 'tempo', uid: 'test-uid' }, query }]))).toBeUndefined();
+    }
+  });
+
   it('should return undefined if context is not provided', () => {
     expect(contextToLink(undefined)).toBeUndefined();
   });
@@ -325,9 +362,12 @@ describe('traceqlFiltersToAdHoc', () => {
 });
 
 const createMockContext = (
-  targets: Array<{ datasource: { type: string; uid?: string }; filters?: TraceqlFilter[]; query?: string }> = [
-    { datasource: { type: 'tempo' }, filters: [] },
-  ]
+  targets: Array<{
+    datasource: { type: string; uid?: string };
+    filters?: TraceqlFilter[];
+    query?: string;
+    drilldownState?: unknown;
+  }> = [{ datasource: { type: 'tempo' }, filters: [] }]
 ): PluginExtensionPanelContext => {
   return {
     pluginId: 'test-plugin',

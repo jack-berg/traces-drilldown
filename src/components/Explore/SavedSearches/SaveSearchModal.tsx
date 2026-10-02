@@ -1,4 +1,4 @@
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { css } from '@emotion/css';
 
@@ -8,8 +8,7 @@ import { SceneObject } from '@grafana/scenes';
 import { Modal, Button, Box, Field, Input, Stack, useStyles2, Alert } from '@grafana/ui';
 import { t, Trans } from '@grafana/i18n';
 
-import { getFiltersVariable, getTraceExplorationScene } from '../../../utils/utils';
-import { renderTraceQLLabelFilters } from '../../../utils/filters-renderer';
+import { useCurrentSearch } from './currentSearch';
 import { useCheckForExistingSearch, useSavedSearches } from './saveSearch';
 
 interface Props {
@@ -24,9 +23,7 @@ export function SaveSearchModal({ dsUid, onClose, sceneRef }: Props) {
   const [state, setState] = useState<'error' | 'idle' | 'saved' | 'saving'>('idle');
   const styles = useStyles2(getStyles);
 
-  const traceExploration = useMemo(() => getTraceExplorationScene(sceneRef), [sceneRef]);
-  const { filters } = getFiltersVariable(traceExploration).useState();
-  const query = useMemo(() => renderTraceQLLabelFilters(filters), [filters]);
+  const { query, drilldownState, ready } = useCurrentSearch(sceneRef);
 
   const { saveSearch } = useSavedSearches(dsUid);
   const existingSearch = useCheckForExistingSearch(dsUid, query);
@@ -42,7 +39,7 @@ export function SaveSearchModal({ dsUid, onClose, sceneRef }: Props) {
 
       try {
         setState('saving');
-        await saveSearch({ description, dsUid, query, title });
+        await saveSearch({ description, dsUid, query, title, drilldownState });
         setState('saved');
 
         appEvents.publish({
@@ -63,7 +60,7 @@ export function SaveSearchModal({ dsUid, onClose, sceneRef }: Props) {
         });
       }
     },
-    [description, dsUid, onClose, query, saveSearch, title]
+    [description, dsUid, onClose, query, saveSearch, title, drilldownState]
   );
 
   return (
@@ -116,7 +113,7 @@ export function SaveSearchModal({ dsUid, onClose, sceneRef }: Props) {
             <Button variant="secondary" fill="outline" onClick={onClose} disabled={state === 'saving'}>
               <Trans i18nKey="save-search-modal.cancel">Cancel</Trans>
             </Button>
-            <Button type="submit" disabled={!title || state === 'saving'}>
+            <Button type="submit" disabled={!title || state === 'saving' || !ready}>
               <Trans i18nKey="save-search-modal.save">Save</Trans>
             </Button>
           </Modal.ButtonRow>

@@ -47,7 +47,6 @@ import { reportAppInteraction, USER_EVENTS_ACTIONS, USER_EVENTS_PAGES } from 'ut
 import { getKgSceneProps } from '../../utils/kgAnnotations';
 import { isKgAnnotationsFeatureEnabled } from '../../featureFlags/featureFlags';
 import { PrimarySignalVariable } from './PrimarySignalVariable';
-import { primarySignalOptions } from './primary-signals';
 import { TraceQLIssueDetector, TraceQLConfigWarning } from '../../components/Explore/TraceQLIssueDetector';
 import { TracesByServiceScene } from 'components/Explore/TracesByService/TracesByServiceScene';
 import { actionViewsDefinitions } from 'components/Explore/TracesByService/Tabs/TabsBarScene';
@@ -336,15 +335,13 @@ const EmbeddedHeader = ({ model }: SceneComponentProps<TraceExplorationScene>) =
 
   const timeRangeState = traceExploration.state.$timeRange?.useState();
   const filtersVariableState = filtersVariable.useState();
+  const primarySignalState = primarySignalVariable.useState();
   const metricVariableState = traceExploration.getMetricVariable().useState();
   const [explorationUrl, setExplorationUrl] = React.useState(() => getUrlForExploration(traceExploration));
 
-  // Force the primary signal to be 'All Spans'
-  primarySignalVariable?.changeValueTo(primarySignalOptions[1].value!);
-
   useEffect(() => {
     setExplorationUrl(getUrlForExploration(traceExploration));
-  }, [timeRangeState, filtersVariableState, metricVariableState, traceExploration]);
+  }, [timeRangeState, filtersVariableState, primarySignalState, metricVariableState, traceExploration]);
 
   return (
     <div className={styles.headerContainer}>

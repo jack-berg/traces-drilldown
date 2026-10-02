@@ -8,7 +8,12 @@ import { DataSourceVariable, SceneObject, sceneGraph } from '@grafana/scenes';
 import { SaveSearchButton } from './SaveSearchButton';
 import { useQueryLibrarySupported, useSavedSearches } from './saveSearch';
 import { renderTraceQLLabelFilters } from '../../../utils/filters-renderer';
-import { getDatasourceVariable, getFiltersVariable, getTraceExplorationScene } from '../../../utils/utils';
+import {
+  getDatasourceVariable,
+  getFiltersVariable,
+  getPrimarySignalVariable,
+  getTraceExplorationScene,
+} from '../../../utils/utils';
 
 jest.mock('./saveSearch');
 jest.mock('../../../utils/utils');
@@ -39,7 +44,12 @@ describe('SaveSearchButton', () => {
       state: { filters: mockFilters },
       useState: () => ({ filters: mockFilters }),
     } as unknown as ReturnType<typeof getFiltersVariable>);
-    jest.mocked(renderTraceQLLabelFilters).mockReturnValue('{job="test"}');
+    jest.mocked(renderTraceQLLabelFilters).mockReturnValue('job="test"');
+    jest
+      .mocked(getPrimarySignalVariable)
+      .mockReturnValue({
+        useState: () => ({ scope: 'root', primarySignal: 'true', semconv: [], value: 'nestedSetParent<0' }),
+      } as unknown as ReturnType<typeof getPrimarySignalVariable>);
     jest.spyOn(sceneGraph, 'getAncestor').mockReturnValue({
       state: { embedded: false },
     } as unknown as SceneObject);
@@ -82,6 +92,41 @@ describe('SaveSearchButton', () => {
       useState: () => ({ filters: [] }),
     } as unknown as ReturnType<typeof getFiltersVariable>);
 
+    const { container } = render(<SaveSearchButton sceneRef={mockSceneRef} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  test('can save a semantic selection without ad-hoc filters', () => {
+    mockGetFiltersVariable.mockReturnValue({ useState: () => ({ filters: [] }) } as unknown as ReturnType<
+      typeof getFiltersVariable
+    >);
+    jest
+      .mocked(getPrimarySignalVariable)
+      .mockReturnValue({
+        useState: () => ({
+          scope: 'all',
+          primarySignal: 'true',
+          semconv: ['type:http.server'],
+          value: 'kind=server',
+          shapes: [],
+        }),
+      } as unknown as ReturnType<typeof getPrimarySignalVariable>);
+    render(<SaveSearchButton sceneRef={mockSceneRef} />);
+    expect(screen.getByRole('button', { name: /Save/i })).toBeInTheDocument();
+  });
+
+  test('does not save an unresolved semantic selection as an unrestricted query', () => {
+    jest
+      .mocked(getPrimarySignalVariable)
+      .mockReturnValue({
+        useState: () => ({
+          scope: 'all',
+          primarySignal: 'true',
+          semconv: ['type:http.server'],
+          value: 'false',
+          catalogLoading: true,
+        }),
+      } as unknown as ReturnType<typeof getPrimarySignalVariable>);
     const { container } = render(<SaveSearchButton sceneRef={mockSceneRef} />);
     expect(container.firstChild).toBeNull();
   });

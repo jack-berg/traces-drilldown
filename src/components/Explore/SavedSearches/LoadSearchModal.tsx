@@ -6,7 +6,7 @@ import { dateTime, GrafanaTheme2 } from '@grafana/data';
 import { reportInteraction } from '@grafana/runtime';
 import { SceneObject } from '@grafana/scenes';
 import { t, Trans } from '@grafana/i18n';
-import { Modal, Box, useStyles2, Stack, Text, Divider, ScrollContainer, IconButton, Button } from '@grafana/ui';
+import { Modal, Box, useStyles2, Stack, Text, Divider, ScrollContainer, IconButton, Button, Alert } from '@grafana/ui';
 
 import { SavedSearch, useSavedSearches, applySavedSearchToScene } from './saveSearch';
 import { getDatasourceVariable } from '../../../utils/utils';
@@ -18,6 +18,7 @@ interface Props {
 
 export function LoadSearchModal({ onClose, sceneRef }: Props) {
   const [selectedSearch, setSelectedSearch] = useState<SavedSearch | null>(null);
+  const [loadError, setLoadError] = useState<string>();
   const styles = useStyles2(getStyles);
 
   const dsUid = useMemo(() => getDatasourceVariable(sceneRef).getValue().toString(), [sceneRef]);
@@ -46,6 +47,7 @@ export function LoadSearchModal({ onClose, sceneRef }: Props) {
 
   const onSelect = useCallback((search: SavedSearch) => {
     setSelectedSearch(search);
+    setLoadError(undefined);
     reportInteraction('grafana_traces_app_load_search_search_toggled');
   }, []);
 
@@ -61,13 +63,23 @@ export function LoadSearchModal({ onClose, sceneRef }: Props) {
     if (!selectedSearch) {
       return;
     }
-    applySavedSearchToScene(sceneRef, selectedSearch.query, selectedSearch.dsUid);
+    try {
+      applySavedSearchToScene(sceneRef, selectedSearch.query, selectedSearch.dsUid, selectedSearch.drilldownState);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to restore this search.');
+      return;
+    }
     reportInteraction('grafana_traces_app_load_search_search_loaded');
     onClose();
   }, [onClose, sceneRef, selectedSearch]);
 
   return (
     <Modal title={t('load-search-modal.title', 'Load a previously saved search')} isOpen={true} onDismiss={onClose}>
+      {loadError && (
+        <Alert title={t('load-search-modal.restore-error', 'Unable to load search')} severity="error">
+          {loadError}
+        </Alert>
+      )}
       {!isLoading && searches.length === 0 && (
         <Box backgroundColor="secondary" padding={1.5} marginBottom={2}>
           <Text variant="body">

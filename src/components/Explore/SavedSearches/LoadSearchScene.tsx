@@ -107,10 +107,17 @@ export class LoadSearchScene extends SceneObjectBase<LoadSearchSceneState> {
           return;
         }
 
-        const tempoQuery = query as DataQuery & { query?: string };
+        const tempoQuery = query as DataQuery & { query?: string; drilldownState?: unknown };
         const queryStr = tempoQuery.query ?? '';
         const dsUid = query.datasource?.uid ?? '';
-        applySavedSearchToScene(model, queryStr, dsUid);
+        try {
+          applySavedSearchToScene(model, queryStr, dsUid, tempoQuery.drilldownState);
+        } catch (error) {
+          appEvents.publish({
+            payload: [error instanceof Error ? error.message : 'Unable to restore this search.'],
+            type: AppEvents.alertError.name,
+          });
+        }
         reportInteraction('grafana_traces_app_load_search_saved_query_loaded');
       },
       [model]

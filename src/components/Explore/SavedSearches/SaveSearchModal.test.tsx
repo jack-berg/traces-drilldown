@@ -7,7 +7,7 @@ import { sceneGraph, SceneObject } from '@grafana/scenes';
 import { SaveSearchModal } from './SaveSearchModal';
 import { useCheckForExistingSearch, useSavedSearches } from './saveSearch';
 import { renderTraceQLLabelFilters } from '../../../utils/filters-renderer';
-import { getFiltersVariable, getTraceExplorationScene } from '../../../utils/utils';
+import { getFiltersVariable, getPrimarySignalVariable, getTraceExplorationScene } from '../../../utils/utils';
 
 jest.mock('./saveSearch');
 jest.mock('../../../utils/utils');
@@ -32,7 +32,12 @@ describe('SaveSearchModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseCheckForExistingSearch.mockReturnValue(undefined);
-    mockRenderTraceQLLabelFilters.mockReturnValue('{job="test"}');
+    mockRenderTraceQLLabelFilters.mockReturnValue('job="test"');
+    jest
+      .mocked(getPrimarySignalVariable)
+      .mockReturnValue({
+        useState: () => ({ scope: 'all', primarySignal: 'true', semconv: [], value: 'true' }),
+      } as unknown as ReturnType<typeof getPrimarySignalVariable>);
     jest.spyOn(sceneGraph, 'getAncestor').mockReturnValue({} as unknown as SceneObject);
     jest.mocked(getTraceExplorationScene).mockReturnValue({} as ReturnType<typeof getTraceExplorationScene>);
     jest.mocked(getFiltersVariable).mockReturnValue({
@@ -70,6 +75,11 @@ describe('SaveSearchModal', () => {
         dsUid: 'test-ds',
         query: '{job="test"}',
         title: 'My Search',
+        drilldownState: {
+          version: 1,
+          spanFilters: { scope: 'all', primarySignal: 'true', semconv: [] },
+          attributeFilters: [],
+        },
       });
     });
 

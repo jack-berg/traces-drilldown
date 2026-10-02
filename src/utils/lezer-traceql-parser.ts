@@ -65,6 +65,7 @@ import {
 } from '@grafana/lezer-traceql';
 
 import { TraceqlFilter } from './links';
+import { t } from '@grafana/i18n';
 
 export interface TraceQLParseResult {
   filters: TraceqlFilter[];
@@ -76,7 +77,8 @@ export interface TraceQLParseError {
     | 'unsupported_or_between_fields'
     | 'unsupported_structural_operator'
     | 'unsupported_pipeline'
-    | 'unsupported_union_operator';
+    | 'unsupported_union_operator'
+    | 'unsupported_negation';
   message: string;
   query: string;
 }
@@ -638,6 +640,17 @@ function checkForOrBetweenSpansets(tree: any, query: string): boolean {
 function checkForUnsupportedPatterns(tree: any, query: string, errors: TraceQLParseError[]): void {
   tree.iterate({
     enter: (nodeRef: SyntaxNodeRef) => {
+      if (nodeRef.type.name === 'FieldExpression' && query[nodeRef.from] === '!') {
+        errors.push({
+          type: 'unsupported_negation',
+          message: t(
+            'traceql-parser.unsupported-negation',
+            'Boolean negation cannot be represented as individual Drilldown filters.'
+          ),
+          query,
+        });
+      }
+
       // Check for structural operators
       if (['Gt', 'Lt', 'Anc', 'Desc'].includes(nodeRef.type.name)) {
         errors.push({

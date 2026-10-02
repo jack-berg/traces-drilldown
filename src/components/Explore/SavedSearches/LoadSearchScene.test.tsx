@@ -173,7 +173,7 @@ describe('LoadSearchScene', () => {
 
       fireEvent.click(screen.getByText('Select'));
 
-      expect(applySavedSearchToScene).toHaveBeenCalledWith(scene, '{job="test1"}', 'test-ds');
+      expect(applySavedSearchToScene).toHaveBeenCalledWith(scene, '{job="test1"}', 'test-ds', undefined);
     });
   });
 });

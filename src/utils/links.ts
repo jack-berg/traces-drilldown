@@ -7,6 +7,8 @@ import {
 } from '@grafana/data';
 
 import { DataSourceRef } from '@grafana/schema';
+import { AdHocFiltersVariable } from '@grafana/scenes';
+import { DrilldownSearchState, narrowDrilldownSearchState } from '../pages/Explore/span-filter-state';
 import { EXPLORATIONS_ROUTE, VAR_DATASOURCE, VAR_FILTERS, VAR_METRIC } from './shared';
 import { parseTraceQLQuery } from './lezer-traceql-parser';
 
@@ -16,6 +18,7 @@ export type TempoQuery = {
   filters?: TraceqlFilter[];
   query?: string; // Raw TraceQL query
   datasource?: DataSourceRef;
+  drilldownState?: DrilldownSearchState;
 };
 
 export interface TraceqlFilter {
@@ -59,6 +62,33 @@ export function contextToLink(context?: PluginExtensionPanelContext) {
     return undefined;
   }
 
+  if (tempoQuery.drilldownState !== undefined) {
+    const restored = narrowDrilldownSearchState(tempoQuery.drilldownState);
+    if (!restored) {
+      return undefined;
+    }
+    const params = new URLSearchParams();
+    params.set(`var-${VAR_DATASOURCE}`, tempoQuery.datasource.uid);
+    params.set('var-primarySignal', restored.spanFilters.primarySignal);
+    params.set('spanScope', restored.spanFilters.scope);
+    for (const selection of restored.spanFilters.semconv) {
+      params.append('spanTypes', selection);
+    }
+    const variable = new AdHocFiltersVariable({ name: VAR_FILTERS, filters: restored.attributeFilters });
+    const urlFilters = variable.urlSync?.getUrlState()[`var-${VAR_FILTERS}`];
+    for (const filter of Array.isArray(urlFilters) ? urlFilters : [urlFilters]) {
+      if (typeof filter === 'string') {
+        params.append(`var-${VAR_FILTERS}`, filter);
+      }
+    }
+    if (context.timeRange) {
+      const range = toURLRange(context.timeRange);
+      params.set('from', String(range.from));
+      params.set('to', String(range.to));
+    }
+    return { path: createAppUrl(params) };
+  }
+
   // Try to get filters from the structured filters array first
   let filters = tempoQuery.filters?.filter(
     (filter) => filter.scope && filter.tag && filter.operator && filter.value && filter.value.length
@@ -71,6 +101,13 @@ export function contextToLink(context?: PluginExtensionPanelContext) {
   if ((!filters || filters.length === 0) && tempoQuery.query) {
     const query = tempoQuery.query;
     const parseResult = parseTraceQLQuery(query);
+    if (
+      parseResult?.errors.some(
+        (error) => error.type === 'unsupported_or_between_fields' || error.type === 'unsupported_negation'
+      )
+    ) {
+      return undefined;
+    }
     if (parseResult && parseResult.filters.length > 0) {
       filters = parseResult.filters.filter(
         (filter) => filter.scope && filter.tag && filter.operator && filter.value && filter.value.length

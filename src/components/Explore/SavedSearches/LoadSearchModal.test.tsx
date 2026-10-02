@@ -106,7 +106,7 @@ describe('LoadSearchModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^select$/i }));
 
-    expect(applySavedSearchToScene).toHaveBeenCalledWith(mockSceneRef, '{job="test1"}', 'test-ds');
+    expect(applySavedSearchToScene).toHaveBeenCalledWith(mockSceneRef, '{job="test1"}', 'test-ds', undefined);
     expect(mockOnClose).toHaveBeenCalled();
   });
 

@@ -80,6 +80,11 @@ describe('useSavedSearches', () => {
       title: 'New Local Search',
       query: '{job="newlocal"}',
       description: 'A new local search',
+      drilldownState: {
+        version: 1 as const,
+        spanFilters: { scope: 'root' as const, primarySignal: 'kind=server', semconv: ['namespace:http'] },
+        attributeFilters: [],
+      },
     };
 
     await act(async () => {
@@ -88,7 +93,9 @@ describe('useSavedSearches', () => {
 
     const stored = narrowSavedSearches(JSON.parse(localStorage.getItem(SAVED_SEARCHES_KEY) || '[]'));
     expect(stored).toHaveLength(4);
-    expect(stored.some((s: SavedSearch) => s.title === 'New Local Search')).toBe(true);
+    expect(stored.find((s: SavedSearch) => s.title === 'New Local Search')?.drilldownState).toEqual(
+      newSearch.drilldownState
+    );
   });
 
   test('Should delete search from localStorage', async () => {
@@ -236,12 +243,15 @@ describe('applySavedSearchToScene', () => {
   const mockSetState = jest.fn();
   const mockChangeValueTo = jest.fn();
   const mockGetValue = jest.fn();
+  const mockRestoreSelection = jest.fn();
 
   beforeEach(() => {
     const utils = require('../../../utils/utils');
     mockSetState.mockClear();
     mockChangeValueTo.mockClear();
     mockGetValue.mockClear();
+    mockRestoreSelection.mockClear();
+    utils.getPrimarySignalVariable.mockReturnValue({ restoreSelection: mockRestoreSelection });
     utils.getTraceExplorationScene.mockReturnValue({});
     utils.getFiltersVariable.mockReturnValue({ setState: mockSetState });
     utils.getDatasourceVariable.mockReturnValue({
@@ -271,6 +281,39 @@ describe('applySavedSearchToScene', () => {
 
     expect(mockSetState).toHaveBeenCalled();
     expect(mockChangeValueTo).not.toHaveBeenCalled();
+  });
+
+  test('restores structured filters without parsing nested shapes as attribute filters', () => {
+    const state = {
+      version: 1,
+      spanFilters: { scope: 'root', primarySignal: 'kind=server', semconv: ['namespace:http', 'type:db.client'] },
+      attributeFilters: [{ key: 'span.name', operator: '=', value: 'a&&b' }],
+    };
+    applySavedSearchToScene({} as any, '{(complex || shape) && filters}', 'ds-1', state);
+    expect(mockRestoreSelection).toHaveBeenCalledWith(state.spanFilters);
+    expect(mockSetState).toHaveBeenCalledWith({ filters: state.attributeFilters });
+  });
+
+  test('legacy saves reset stale semantic restrictions and preserve quoted ampersands', () => {
+    applySavedSearchToScene({} as any, '{resource.service.name="a&&b" && span:status=error}', 'ds-1');
+    expect(mockRestoreSelection).toHaveBeenCalledWith({ scope: 'all', primarySignal: 'true', semconv: [] });
+    const [[state]] = mockSetState.mock.calls;
+    expect(state.filters).toHaveLength(2);
+    expect(state.filters[0].value).toBe('a&&b');
+  });
+
+  test('rejects invalid metadata rather than dropping its shape restriction', () => {
+    expect(() => applySavedSearchToScene({} as any, '{}', 'ds-1', { version: 999 })).toThrow(
+      'invalid Drilldown filter state'
+    );
+    expect(mockSetState).not.toHaveBeenCalled();
+  });
+
+  test('does not silently flatten unsupported OR queries when saved metadata is absent', () => {
+    for (const query of ['{span.foo != nil || span.bar != nil}', '{!(kind=server && span.foo != nil)}']) {
+      expect(() => applySavedSearchToScene({} as any, query, 'ds-1')).toThrow('without its saved filter state');
+    }
+    expect(mockSetState).not.toHaveBeenCalled();
   });
 
   test('applies empty filters when query parses to no filters', () => {
