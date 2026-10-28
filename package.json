@@ -93,7 +93,7 @@
     "@grafana/data": "13.1.0",
     "@grafana/faro-web-sdk": "2.8.0",
     "@grafana/i18n": "13.1.0",
-    "@grafana/otel-semconv-client": "file:../grafana-otel-schema-registry-app/packages/semconv-client",
+    "@grafana/otel-semconv-client": "file:../grafana-otel-schema-registry-app-hackathon-shared-client/packages/semconv-client",
     "@grafana/lezer-traceql": "^0.0.23",
     "@grafana/plugin-compat": "0.1.0",
     "@grafana/runtime": "13.1.0",

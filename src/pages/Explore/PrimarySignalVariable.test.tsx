@@ -254,7 +254,7 @@ it('links to the complete registry span-types page in a new tab with the Grafana
     const model = new PrimarySignalVariable({});
     render(<model.Component model={model} />);
     const link = screen.getByRole('link', { name: 'Browse span types in registry' });
-    expect(link).toHaveAttribute('href', '/grafana/a/grafana-otel-schema-registry-app/spans');
+    expect(link).toHaveAttribute('href', '/grafana/a/grafana-otelschemaregistry-app/spans');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(fetch).not.toHaveBeenCalled();
